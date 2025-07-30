@@ -1,2 +1,5 @@
-3rdparty/
-media/
+3rdparty/opencv/*
+!3rdparty/opencv/.gitkeep
+3rdparty/rga/*
+!3rdparty/rga/.gitkeep
+media/*.mp4
