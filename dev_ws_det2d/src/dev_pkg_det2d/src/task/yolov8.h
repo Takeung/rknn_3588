@@ -1,0 +1,37 @@
+#ifndef RK3588_DEMO_YOLOV8_H
+#define RK3588_DEMO_YOLOV8_H
+
+#include "engine/engine.h"
+#include "process/preprocess.h"
+#include "types/yolo_datatype.h"
+
+class Yolov8 {
+  public:
+    Yolov8();
+    Yolov8(const std::string& labels_path, float conf_thresh, float nms_thresh);
+    ~Yolov8();
+
+    nn_error_e LoadModel(const char* model_path);     // 加载模型
+    nn_error_e Run(const cv::Mat& img,
+                   std::vector<Detection>& objects);  // 运行模型
+
+  private:
+    nn_error_e Preprocess(const cv::Mat& img, PreprocessType type,
+                          cv::Mat& image_letterbox);  // 图像预处理
+    nn_error_e Inference();                           // 推理
+    nn_error_e Postprocess(const cv::Mat& img, std::vector<Detection>& objects,
+                           PreprocessType type);      // 后处理
+
+    LetterBoxInfo letterbox_info_;
+    tensor_data_s input_tensor_;
+    std::vector<tensor_data_s> output_tensors_;
+    std::vector<int32_t> out_zps_;
+    std::vector<float> out_scales_;
+    std::shared_ptr<NNEngine> engine_;
+
+    std::string labels_path_;
+    float conf_thresh_;
+    float nms_thresh_;
+};
+
+#endif  // RK3588_DEMO_YOLOV8_H
