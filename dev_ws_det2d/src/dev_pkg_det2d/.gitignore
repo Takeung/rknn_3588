@@ -1,5 +1,4 @@
 3rdparty/opencv/*
 !3rdparty/opencv/.gitkeep
-3rdparty/rga/*
-!3rdparty/rga/.gitkeep
 media/*.mp4
+!media/bj_short.mp4
