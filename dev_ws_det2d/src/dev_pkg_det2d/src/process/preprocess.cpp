@@ -3,9 +3,9 @@
 #include "preprocess.h"
 
 #include "utils/logging.h"
-#include <im2d.h>
-#include <rga.h>
-#include <RgaUtils.h>
+#include <rga/im2d.h>
+#include <rga/rga.h>
+#include <rga/RgaUtils.h>
 
 // opencv 版本的 letterbox
 LetterBoxInfo letterbox(const cv::Mat& img, cv::Mat& img_letterbox,

@@ -50,7 +50,7 @@ Yolov7::Yolov7() {
     engine_ = CreateRKNNEngine();
     input_tensor_.data = nullptr;
 
-    labels_path_ = "src/dev_pkg_det2d/config/labels/coco_yolov7.json";
+    labels_path_ = "dev_ws_det2d/src/dev_pkg_det2d/config/labels/coco_yolov7.json";
     conf_thresh_ = 0.25;
     nms_thresh_ = 0.45;
     // Load parameters from JSON file
