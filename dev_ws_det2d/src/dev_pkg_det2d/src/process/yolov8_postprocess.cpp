@@ -162,7 +162,7 @@ static float deqnt_affine_to_f32(int8_t qnt, int32_t zp, float scale) {
 
 static void compute_dfl(float* tensor, int dfl_len, float* box) {
     for (int b = 0; b < 4; b++) {
-        float exp_t[dfl_len];
+        std::vector<float> exp_t(dfl_len);
         float exp_sum = 0;
         float acc_sum = 0;
         for (int i = 0; i < dfl_len; i++) {
@@ -216,13 +216,14 @@ static int process_i8(int8_t* box_tensor, int32_t box_zp, float box_scale,
             if (max_score > score_thres_i8) {
                 offset = i * grid_w + j;
                 float box[4];
-                float before_dfl[dfl_len * 4];
+                float *before_dfl = new float[dfl_len * 4];
                 for (int k = 0; k < dfl_len * 4; k++) {
                     before_dfl[k] = deqnt_affine_to_f32(box_tensor[offset],
                                                         box_zp, box_scale);
                     offset += grid_len;
                 }
                 compute_dfl(before_dfl, dfl_len, box);
+                delete[] before_dfl;
 
                 float x1, y1, x2, y2, w, h;
                 x1 = (-box[0] + j + 0.5) * stride;
@@ -279,12 +280,13 @@ static int process_fp32(float* box_tensor, float* score_tensor,
             if (max_score > threshold) {
                 offset = i * grid_w + j;
                 float box[4];
-                float before_dfl[dfl_len * 4];
+                float *before_dfl = new float[dfl_len * 4];
                 for (int k = 0; k < dfl_len * 4; k++) {
                     before_dfl[k] = box_tensor[offset];
                     offset += grid_len;
                 }
                 compute_dfl(before_dfl, dfl_len, box);
+                delete[] before_dfl;
 
                 float x1, y1, x2, y2, w, h;
                 x1 = (-box[0] + j + 0.5) * stride;

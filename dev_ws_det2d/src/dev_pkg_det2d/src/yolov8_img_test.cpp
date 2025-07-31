@@ -5,7 +5,7 @@
 #include "task/yolov8.h"
 #include "utils/logging.h"
 
-int main(int argc, char** argv) {
+int main(int, char** argv) {
     // model file path
     const char* model_file = argv[1];
     // input img path

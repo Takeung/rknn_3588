@@ -129,14 +129,14 @@ nn_error_e Yolov8::Preprocess(const cv::Mat& img, PreprocessType type,
     if (type == AFFINE) {
         image_preprocess = img;
     } else if (type == LETTERBOX) {
-        letterbox_info_ = letterbox(img, image_preprocess, wh_ratio);
+        letterbox_info_ = letterbox_rga(img, image_preprocess, wh_ratio);
     } else {
         NN_LOG_ERROR("unknown preprocess type: %d", type);
         return NN_PREPROCESS_FAIL;
     }
 
     // BGR2RGB，resize，再放入input_tensor_中
-    cvimg2tensor(image_preprocess, input_tensor_.attr.dims[2],
+    cvimg2tensor_rga(image_preprocess, input_tensor_.attr.dims[2],
                  input_tensor_.attr.dims[1], input_tensor_);
 
     return NN_SUCCESS;

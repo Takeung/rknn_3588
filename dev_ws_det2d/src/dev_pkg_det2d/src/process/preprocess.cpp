@@ -3,8 +3,9 @@
 #include "preprocess.h"
 
 #include "utils/logging.h"
-// #include "im2d.h"
-// #include "rga.h"
+#include <im2d.h>
+#include <rga.h>
+#include <RgaUtils.h>
 
 // opencv 版本的 letterbox
 LetterBoxInfo letterbox(const cv::Mat& img, cv::Mat& img_letterbox,
@@ -81,92 +82,131 @@ void cvimg2tensor(const cv::Mat& img, uint32_t width, uint32_t height,
     memcpy(tensor.data, img_resized.data, tensor.attr.size);
 }
 
-// // rga 版本的 resize
-// void cvimg2tensor_rga(const cv::Mat& img, uint32_t width, uint32_t height,
-//                       tensor_data_s& tensor) {
-//     // img has to be 3 channels
-//     if (img.channels() != 3) {
-//         NN_LOG_ERROR("img has to be 3 channels");
-//         exit(-1);
-//     }
+// rga 版本的 resize
+void cvimg2tensor_rga(const cv::Mat& img, uint32_t width, uint32_t height, tensor_data_s& tensor) {
+    // 输入验证
+    if (img.channels() != 3) {
+        NN_LOG_ERROR("img has to be 3 channels");
+        exit(-1);
+    }
 
-//     cv::Mat img_rgb;
-//     cv::cvtColor(img, img_rgb, cv::COLOR_BGR2RGB);
+    // 初始化RGA相关结构体
+    rga_buffer_handle_t src_handle, dst_handle;
+    rga_buffer_t src_img, dst_img;
+    im_rect src_rect = {};  // 源图像区域(全图)
+    im_rect dst_rect = {};  // 目标图像区域(全图)
+    int release_fence_fd = -1;
 
-//     im_rect src_rect;
-//     im_rect dst_rect;
-//     memset(&src_rect, 0, sizeof(src_rect));
-//     memset(&dst_rect, 0, sizeof(dst_rect));
-//     rga_buffer_t src = wrapbuffer_virtualaddr((void*)img_rgb.data, img.cols,
-//                                               img.rows, RK_FORMAT_RGB_888);
-//     rga_buffer_t dst = wrapbuffer_virtualaddr((void*)tensor.data, width, height,
-//                                               RK_FORMAT_RGB_888);
-//     int ret = imcheck(src, dst, src_rect, dst_rect);
-//     if (IM_STATUS_NOERROR != ret) {
-//         NN_LOG_ERROR("%d, check error! %s", __LINE__,
-//                      imStrError((IM_STATUS)ret));
-//         exit(-1);
-//     }
-//     imresize(src, dst);
-// }
+    memset(&src_img, 0, sizeof(src_img));
+    memset(&dst_img, 0, sizeof(dst_img));
 
-// // rga 版本的 letterbox
-// LetterBoxInfo letterbox_rga(const cv::Mat& img, cv::Mat& img_letterbox,
-//                             float wh_ratio) {
-//     // img has to be 3 channels
-//     if (img.channels() != 3) {
-//         NN_LOG_ERROR("img has to be 3 channels");
-//         exit(-1);
-//     }
-//     float img_width = img.cols;
-//     float img_height = img.rows;
+    // 获取源图像尺寸
+    int src_width = img.cols;
+    int src_height = img.rows;
 
-//     int letterbox_width = 0;
-//     int letterbox_height = 0;
+    // 导入缓冲区
+    src_handle = importbuffer_virtualaddr(img.data, src_width * src_height * 3);
+    dst_handle = importbuffer_virtualaddr(tensor.data, width * height * 3);
+    if (src_handle == 0 || dst_handle == 0) {
+        NN_LOG_ERROR("RGA importbuffer failed!");
+        exit(-1);
+    }
 
-//     LetterBoxInfo info;
-//     int padding_hor = 0;
-//     int padding_ver = 0;
+    // 包装缓冲区(RGB格式)
+    src_img = wrapbuffer_handle(src_handle, src_width, src_height, RK_FORMAT_RGB_888);
+    dst_img = wrapbuffer_handle(dst_handle, width, height, RK_FORMAT_RGB_888);
 
-//     if (img_width / img_height > wh_ratio) {
-//         info.hor = false;
-//         letterbox_width = img_width;
-//         letterbox_height = img_width / wh_ratio;
-//         info.pad = (letterbox_height - img_height) / 2.f;
-//         padding_hor = 0;
-//         padding_ver = info.pad;
-//     } else {
-//         info.hor = true;
-//         letterbox_width = img_height * wh_ratio;
-//         letterbox_height = img_height;
-//         info.pad = (letterbox_width - img_width) / 2.f;
-//         padding_hor = info.pad;
-//         padding_ver = 0;
-//     }
-//     // rga add border
-//     img_letterbox = cv::Mat::zeros(letterbox_height, letterbox_width, CV_8UC3);
+    // 设置源区域(全图)
+    src_rect.x = 0;
+    src_rect.y = 0;
+    src_rect.width = src_width;
+    src_rect.height = src_height;
 
-//     im_rect src_rect;
-//     im_rect dst_rect;
-//     memset(&src_rect, 0, sizeof(src_rect));
-//     memset(&dst_rect, 0, sizeof(dst_rect));
+    // 设置目标区域(全图)
+    dst_rect.x = 0;
+    dst_rect.y = 0;
+    dst_rect.width = width;
+    dst_rect.height = height;
 
-//     // NN_LOG_INFO("img size: %d, %d", img.cols, img.rows);
+    // 检查参数有效性
+    int ret = imcheck(src_img, dst_img, src_rect, dst_rect);
+    if (IM_STATUS_NOERROR != ret) {
+        NN_LOG_ERROR("RGA check failed: %s", imStrError((IM_STATUS)ret));
+        exit(-1);
+    }
 
-//     rga_buffer_t src = wrapbuffer_virtualaddr((void*)img.data, img.cols,
-//                                               img.rows, RK_FORMAT_RGB_888);
-//     rga_buffer_t dst =
-//         wrapbuffer_virtualaddr((void*)img_letterbox.data, img_letterbox.cols,
-//                                img_letterbox.rows, RK_FORMAT_RGB_888);
-//     int ret = imcheck(src, dst, src_rect, dst_rect);
-//     if (IM_STATUS_NOERROR != ret) {
-//         NN_LOG_ERROR("%d, check error! %s", __LINE__,
-//                      imStrError((IM_STATUS)ret));
-//         exit(-1);
-//     }
+    // 执行图像处理(缩放+颜色空间转换)
+    ret = improcess(src_img, dst_img, {}, src_rect, dst_rect, {}, -1, &release_fence_fd, nullptr, IM_ASYNC);
+    if (ret != IM_STATUS_SUCCESS) {
+        NN_LOG_ERROR("RGA process failed: %s", imStrError((IM_STATUS)ret));
+        exit(-1);
+    }
 
-//     immakeBorder(src, dst, padding_ver, padding_ver, padding_hor, padding_hor,
-//                  0, 0, 0);
+    // 同步等待操作完成
+    ret = imsync(release_fence_fd);
+    if (ret != IM_STATUS_SUCCESS) {
+        NN_LOG_ERROR("RGA sync failed: %s", imStrError((IM_STATUS)ret));
+        exit(-1);
+    }
+}
 
-//     return info;
-// }
+// rga 版本的 letterbox
+LetterBoxInfo letterbox_rga(const cv::Mat& img, cv::Mat& img_letterbox,
+                            float wh_ratio) {
+    // img has to be 3 channels
+    if (img.channels() != 3) {
+        NN_LOG_ERROR("img has to be 3 channels");
+        exit(-1);
+    }
+    float img_width = img.cols;
+    float img_height = img.rows;
+
+    int letterbox_width = 0;
+    int letterbox_height = 0;
+
+    LetterBoxInfo info;
+    int padding_hor = 0;
+    int padding_ver = 0;
+
+    if (img_width / img_height > wh_ratio) {
+        info.hor = false;
+        letterbox_width = img_width;
+        letterbox_height = img_width / wh_ratio;
+        info.pad = (letterbox_height - img_height) / 2.f;
+        padding_hor = 0;
+        padding_ver = info.pad;
+    } else {
+        info.hor = true;
+        letterbox_width = img_height * wh_ratio;
+        letterbox_height = img_height;
+        info.pad = (letterbox_width - img_width) / 2.f;
+        padding_hor = info.pad;
+        padding_ver = 0;
+    }
+    // rga add border
+    img_letterbox = cv::Mat::zeros(letterbox_height, letterbox_width, CV_8UC3);
+
+    im_rect src_rect;
+    im_rect dst_rect;
+    memset(&src_rect, 0, sizeof(src_rect));
+    memset(&dst_rect, 0, sizeof(dst_rect));
+
+    // NN_LOG_INFO("img size: %d, %d", img.cols, img.rows);
+
+    rga_buffer_t src = wrapbuffer_virtualaddr((void*)img.data, img.cols,
+                                              img.rows, RK_FORMAT_RGB_888);
+    rga_buffer_t dst =
+        wrapbuffer_virtualaddr((void*)img_letterbox.data, img_letterbox.cols,
+                               img_letterbox.rows, RK_FORMAT_RGB_888);
+    int ret = imcheck(src, dst, src_rect, dst_rect);
+    if (IM_STATUS_NOERROR != ret) {
+        NN_LOG_ERROR("%d, check error! %s", __LINE__,
+                     imStrError((IM_STATUS)ret));
+        exit(-1);
+    }
+
+    immakeBorder(src, dst, padding_ver, padding_ver, padding_hor, padding_hor,
+                 0, 0, 0);
+
+    return info;
+}

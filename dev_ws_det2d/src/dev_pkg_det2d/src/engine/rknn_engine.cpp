@@ -59,8 +59,7 @@ nn_error_e RKEngine::LoadModelFile(const char* model_file) {
 
     // 输入属性
     NN_LOG_INFO("input tensors:");
-    rknn_tensor_attr input_attrs[io_num.n_input];
-    memset(input_attrs, 0, sizeof(input_attrs));
+    std::vector<rknn_tensor_attr> input_attrs(io_num.n_input);
     for (int i = 0; i < io_num.n_input; i++) {
         input_attrs[i].index = i;
         ret = rknn_query(rknn_ctx_, RKNN_QUERY_INPUT_ATTR, &(input_attrs[i]),
@@ -76,8 +75,7 @@ nn_error_e RKEngine::LoadModelFile(const char* model_file) {
 
     // 输出属性
     NN_LOG_INFO("output tensors:");
-    rknn_tensor_attr output_attrs[io_num.n_output];
-    memset(output_attrs, 0, sizeof(output_attrs));
+    std::vector<rknn_tensor_attr> output_attrs(io_num.n_output);
     for (int i = 0; i < io_num.n_output; i++) {
         output_attrs[i].index = i;
         ret = rknn_query(rknn_ctx_, RKNN_QUERY_OUTPUT_ATTR, &(output_attrs[i]),

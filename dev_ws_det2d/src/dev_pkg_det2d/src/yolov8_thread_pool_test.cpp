@@ -14,7 +14,7 @@ static int g_frame_end_id = 0;    // 模型处理完的索引
 static YoloThreadPool<Yolov8>* g_pool = nullptr;
 bool end = false;
 
-void get_results(int width = 1280, int height = 720, int fps = 30) {
+void get_results(int width = 1280, int height = 720) {
     // 记录开始时间
     auto start_all = std::chrono::high_resolution_clock::now();
     int frame_count = 0;
@@ -31,15 +31,19 @@ void get_results(int width = 1280, int height = 720, int fps = 30) {
 
         // debug: show img in realtime
         // cv::Mat img_show;
-        // int desiredWidth = 640;
+        // int desiredWidth = width;
+        // int desiredHeight = height;
         // int originalWidth = img.cols;
         // int originalHeight = img.rows;
         // float aspectRatio = static_cast<float>(originalHeight) /
         //                     static_cast<float>(originalWidth);
-        // int newHeight = static_cast<int>(desiredWidth * aspectRatio);
-        // cv::resize(img, img_show, cv::Size(desiredWidth, newHeight));
-        cv::imshow("Video Frame", img);
-        cv::waitKey(1);
+        // desiredHeight = static_cast<int>(desiredWidth * aspectRatio);
+        // cv::resize(img, img_show, cv::Size(desiredWidth, desiredHeight));
+        // cv::imshow("Video Frame", img);
+        // cv::waitKey(1);
+
+        (void)width;
+        (void)height;
 
         // 算法2：计算超过 1s 一共处理了多少张图片
         frame_count++;
@@ -118,7 +122,7 @@ int main(int argc, char** argv) {
     // 读取视频
     std::thread read_stream_thread(read_stream, video_file);
     // 启动结果线程
-    std::thread result_thread(get_results, 1280, 720, 25);
+    std::thread result_thread(get_results, 1280, 720);
 
     // 等待线程结束
     read_stream_thread.join();
